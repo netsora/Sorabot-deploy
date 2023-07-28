@@ -1,5 +1,11 @@
 # Sorabot-deploy
-林汐 一键安装脚本 / SoraBot easy installation
+林汐 一键安装脚本
 
-## 运行方式
-bash <(curl -s -L https://raw.githubusercontent.com/TKINGNAMe/Sorabot-deploy/master/install.sh)
+## 使用方法
+```bash
+bash <(curl -s -L https://raw.githubusercontent.com/TKINGNAMEe/Sorabot-deploy/master/install.sh)
+```
+
+## 更新日志
+2023/7/28
+* Nice to meet you !
