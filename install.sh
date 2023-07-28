@@ -7,7 +7,7 @@ SoraBot_url="https://github.com/netsora/SoraBot.git"
 WORK_DIR="/data"
 TMP_DIR="$(mktemp -d)"
 python_v="python3.10"
-sh_ver="1.1.3"
+sh_ver="1.0.0"
 ghproxy="https://ghproxy.com/"
 mirror_url="https://pypi.org/simple"
 
@@ -111,9 +111,8 @@ Installation_dependency() {
                 make -j $(cat /proc/cpuinfo |grep "processor"|wc -l) && \
                 make altinstall > /dev/null
                 ln -s /data/${python_v}/bin/* /usr/bin
-            python_v="python3.10"
         fi
-	#${python_v} <`curl -s -L https://bootstrap.pypa.io/get-pip.py` || echo -e "${Tip} pip 安装出错..."
+
         rpm -v --import http://li.nux.ro/download/nux/RPM-GPG-KEY-nux.ro > /dev/null
         rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm > /dev/null
     elif [[ ${release} == "debian" ]]; then
@@ -128,7 +127,6 @@ Installation_dependency() {
                 make -j $(cat /proc/cpuinfo |grep "processor"|wc -l) && \
                 make altinstall > /dev/null
 		ln -s /data/${python_v}/bin/* /usr/bin
-             pythone_v="python3.10"    
         fi
         apt-get install -y \
             vim \
@@ -146,7 +144,7 @@ Installation_dependency() {
             libgbm1 \
             libgtk-3-0 \
             libasound2 > /dev/null
-        #${python_v} <`curl -s -L https://bootstrap.pypa.io/get-pip.py` || echo -e "${Tip} pip 安装出错..."
+
     elif [[ ${release} == "ubuntu" ]]; then
         #apt-get update > /dev/null
         apt-get install -y software-properties-common ttf-wqy-zenhei ttf-wqy-microhei fonts-arphic-ukai fonts-arphic-uming > /dev/null
@@ -154,7 +152,6 @@ Installation_dependency() {
         echo -e "\n" | add-apt-repository ppa:deadsnakes/ppa
         if  ! which python3.10;then
             apt-get install -y python3.10-full > /dev/null
-	    python_v="python3.10"
             
         fi
         apt-get install -y \
@@ -173,7 +170,7 @@ Installation_dependency() {
             libgbm1 \
             libgtk-3-0 \
             libasound2 > /dev/null
-        #${python_v} <`curl -s -L https://bootstrap.pypa.io/get-pip.py` || echo -e "${Tip} pip 安装出错..."
+
     elif [[ ${release} == "archlinux" ]]; then
         pacman -Sy python python-pip unzip --noconfirm
     fi
@@ -204,7 +201,7 @@ Download_SoraBot() {
     tar -zxf "${TMP_DIR}/go-cqhttp.tar.gz" -C ./go-cqhttp/
 }
 
-Set_config_admin() {
+Set_config_env() {
     echo -e "${Info} 请输入频道信息:"
     read -erp "QQ频道BotAppID(开发者ID):" BotAppID
     read -erp "QQ频道机器人令牌:" BotToken
@@ -220,7 +217,7 @@ Set_config_admin() {
    if [[ -n "$tg_token" ]] && [[ $tg_token != "" ]]  ;then
       sed -i "s/telegram_bots.*/telegram_bots = [{${tg_token}}]/g" .env 
       read -erp "tg的代理proxy网址(你已经设置了tg机器人,请使用魔法!):" tg_proxy
-      sed -i "/^PROXY/s/PROXY=*/PROXY=\"$tg_proxy\"/" .env.prod
+      sed -i "/^PROXY/s/PROXY=.*/PROXY=\"$tg_proxy\"/" .env.prod
 
    else 
       # 注释掉TG模块
@@ -228,6 +225,35 @@ Set_config_admin() {
 
    fi
 }
+
+Set_config_envprod(){
+cd ${WORK_DIR}/SoraBot || echo -e ${Error} "请确认是否正确安装了SoraBot"
+echo -e ${Info} "-------------------------关于管理账号的解释-------------------------"
+echo -e ${Info} "林汐没有使用 Nonebot2 所提供的 SUPERUSER，而是改为了 Bot管理员 和 Bot协助者"
+echo -e ${Info} "-----WARNING----------请注意所有的ID都必须保持唯一----------WARNING-----"
+echo -e ${Info} "启动后，林汐会自动为他们注册账号及密码${Red_font_prefix}(初始密码可以在启动后的日志中查看)"
+echo -e ${Info} "下面开始设置你的管理员账号和协助者账号${Red_font_prefix}(管理员账号只能设置一个!!权限最大)"
+echo -e ${Info} "-------------------------关于管理账号的解释-------------------------"
+echo ""
+
+read -erp "请输入Bot管理员ID(自定义,注意前后不能有空格)" bot_admin
+
+sed -i "/BOT_ADMIN/s/BOT_ADMIN.*/BOT_ADMIN=[\"$bot_admin\"]/" .env.prod && echo "设置成功"
+
+read -erp "请输入Bot协助者ID(自定义,多个账号时使用 '/' 分隔)" bot_helper
+bot_helper_list=(`echo $bot_helper | awk -F '/' '{for (i=1;i<=NF;i++){print $i} }'`)
+
+for i in ${bot_helper_list[@]}
+do
+list+=\"$i\",
+done
+
+sed -i "/BOT_HELPER/s/BOT_HELPER.*/BOT_HELPER=[$list]/" .env.prod && echo "设置成功"
+
+
+
+}
+
 
 Set_config_bot() {
     echo -e "${Info} 请输入Bot QQ账号:[QQ]"
@@ -244,7 +270,7 @@ Set_config() {
         cd ${WORK_DIR}/go-cqhttp && echo -e "3\n" | ./go-cqhttp > /dev/null 2>&1
     fi
     Set_config_bot
-    Set_config_admin
+    Set_config_env
 }
 
 Start_SoraBot() {
@@ -276,7 +302,23 @@ View_SoraBot_log() {
 }
 
 Set_config_SoraBot() {
+echo " 输入需要修改的配置(输入阿拉伯数字即可):"
+echo -e "${Green_font_prefix} 0.${Font_color_suffix} 返回上一级 总控制菜单"
+echo -e "${Green_font_prefix} 1.${Font_color_suffix} 修改插件配置 config.yaml"
+echo -e "${Green_font_prefix} 2.${Font_color_suffix} 修改适配器配置 .env"
+echo -e "${Green_font_prefix} 3.${Font_color_suffix} 修改Bot配置 .env.prod"
+read -erp " 请选择:" config_num
+if [ $config_num == '1' ];then
     vim ${WORK_DIR}/SoraBot/sora/config/config.yaml
+elif [ $config_num == '2' ];then
+    vim ${WORK_DIR}/SoraBot/.env
+elif [ $config_num == '3' ];then
+    vim ${WORK_DIR}/SoraBot/.env.prod
+elif [ $config_num == '0' ];then
+    menu_SoraBot
+else 
+    echo -e ${Error} "暂不支持其他配置，请重新输入哦!"
+fi
 }
 
 Start_cqhttp() {
@@ -489,11 +531,11 @@ menu_SoraBot() {
  ${Green_font_prefix} 3.${Font_color_suffix} 停止 SoraBot
  ${Green_font_prefix} 4.${Font_color_suffix} 重启 SoraBot
 ————————————
- ${Green_font_prefix} 5.${Font_color_suffix} 设置 管理员账号
- ${Green_font_prefix} 6.${Font_color_suffix} 修改 SoraBot 配置文件
- ${Green_font_prefix} 7.${Font_color_suffix} 查看 SoraBot 日志
+ ${Green_font_prefix} 5.${Font_color_suffix} 设置 频道机器人账号
+ ${Green_font_prefix} 6.${Font_color_suffix} 设置 管理员账号
+ ${Green_font_prefix} 7.${Font_color_suffix} 修改 SoraBot 配置文件
 ————————————
- ${Green_font_prefix} 8.${Font_color_suffix} 查看 go-cqhttp 日志
+ ${Green_font_prefix} 8.${Font_color_suffix} 查看 SoraBot 日志
  ${Green_font_prefix} 9.${Font_color_suffix} 卸载 SoraBot + go-cqhttp
  ${Green_font_prefix}10.${Font_color_suffix} 切换为 go-cqhttp 菜单" && echo
   if [[ -e "${WORK_DIR}/SoraBot/bot.py" ]]; then
@@ -534,16 +576,16 @@ menu_SoraBot() {
     Restart_SoraBot
     ;;
   5)
-    Set_config_admin
+    Set_config_env
     ;;
   6)
-    Set_config_SoraBot
+    Set_config_envprod
     ;;
   7)
-    View_SoraBot_log
+    Set_config_SoraBot
     ;;
   8)
-    View_cqhttp_log
+    View_SoraBot_log
     ;;
   9)
     Uninstall_All
