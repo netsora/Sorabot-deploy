@@ -220,7 +220,7 @@ Set_config_admin() {
    if [[ -n "$tg_token" ]] && [[ $tg_token != "" ]]  ;then
       sed -i "s/telegram_bots.*/telegram_bots = [{${tg_token}}]/g" .env 
       read -erp "tg的代理proxy网址(你已经设置了tg机器人,请使用魔法!):" tg_proxy
-      sed -i "/^PROXY/s/PROXY=*/PROXY=\"$tg_proxy\"/" .env.prod
+      sed -i "/^PROXY/s/PROXY=.*/PROXY=\"$tg_proxy\"/" .env.prod
 
    else 
       # 注释掉TG模块
