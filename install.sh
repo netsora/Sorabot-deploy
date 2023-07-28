@@ -84,6 +84,7 @@ Set_work_dir() {
   read -erp "留空使用默认目录, 默认为 (/data):" work_dir_check
   [[ -z "${work_dir_check}" ]] && WORK_DIR='/data'
   [[ -n ${work_dir_check} ]] && WORK_DIR=${work_dir_check}
+  [[ -d $WORK_DIR ]] || mkdir $WORK_DIR
 }
 
 Installation_openssl(){
