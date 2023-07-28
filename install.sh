@@ -2,7 +2,7 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 
-update_shell_url=""
+update_shell_url="https://raw.githubusercontent.com/TKINGNAMe/Sorabot-deploy/master/install.sh"
 SoraBot_url="https://github.com/netsora/SoraBot.git"
 WORK_DIR="/data"
 TMP_DIR="$(mktemp -d)"
@@ -206,7 +206,7 @@ Download_SoraBot() {
 
 Set_config_admin() {
     echo -e "${Info} 请输入频道信息:"
-    read -erp "QQ频道开发者ID:" BotAppID
+    read -erp "QQ频道BotAppID(开发者ID):" BotAppID
     read -erp "QQ频道机器人令牌:" BotToken
     read -erp "QQ频道机器人密钥:" BotSecret
     read -erp "tg机器人token(如果不使用tg可以为空，请直接回车):" tg_token 
@@ -219,6 +219,8 @@ Set_config_admin() {
 
    if [[ -n "$tg_token" ]] && [[ $tg_token != "" ]]  ;then
       sed -i "s/telegram_bots.*/telegram_bots = [{${tg_token}}]/g" .env 
+      read -erp "tg的代理proxy网址(你已经设置了tg机器人,请使用魔法!):" tg_proxy
+      sed -i "/^PROXY/s/PROXY=*/PROXY=\"$tg_proxy\"/" .env.prod
 
    else 
       # 注释掉TG模块
@@ -255,14 +257,6 @@ Start_SoraBot() {
     echo -e "${Info} SoraBot 开始运行..."
 }
 
-Start_SoraBot_Old() {
-    check_installed_SoraBot_status
-    check_pid_SoraBot
-    [[ -n ${PID} ]] && echo -e "${Error} SoraBot 正在运行，请检查 !" && exit 1
-    cd ${WORK_DIR}/SoraBot
-    nohup ${python_v} bot.py >> SoraBot.log 2>&1 &
-    echo -e "${Info} SoraBot 开始运行..."
-}
 
 Stop_SoraBot() {
     check_installed_SoraBot_status
@@ -282,7 +276,7 @@ View_SoraBot_log() {
 }
 
 Set_config_SoraBot() {
-    vim ${WORK_DIR}/SoraBot/configs/config.yaml
+    vim ${WORK_DIR}/SoraBot/sora/config/config.yaml
 }
 
 Start_cqhttp() {
@@ -317,10 +311,6 @@ Set_config_cqhttp() {
     vim ${WORK_DIR}/go-cqhttp/config.yml
 }
 
-
-Set_config_SoraBot() {
-    vim ${WORK_DIR}/SoraBot/configs/config.yaml
-}
 
 Exit_cqhttp() {
     cd ${WORK_DIR}/go-cqhttp
@@ -503,8 +493,8 @@ menu_SoraBot() {
  ${Green_font_prefix} 6.${Font_color_suffix} 修改 SoraBot 配置文件
  ${Green_font_prefix} 7.${Font_color_suffix} 查看 SoraBot 日志
 ————————————
- ${Green_font_prefix} 8.${Font_color_suffix} 卸载 SoraBot + go-cqhttp
- ${Green_font_prefix} 9.${Font_color_suffix} 旧版启动 SoraBot
+ ${Green_font_prefix} 8.${Font_color_suffix} 查看 go-cqhttp 日志
+ ${Green_font_prefix} 9.${Font_color_suffix} 卸载 SoraBot + go-cqhttp
  ${Green_font_prefix}10.${Font_color_suffix} 切换为 go-cqhttp 菜单" && echo
   if [[ -e "${WORK_DIR}/SoraBot/bot.py" ]]; then
     check_pid_SoraBot
@@ -553,10 +543,10 @@ menu_SoraBot() {
     View_SoraBot_log
     ;;
   8)
-    Uninstall_All
+    View_cqhttp_log
     ;;
   9)
-    Start_SoraBot_Old
+    Uninstall_All
     ;;
   10)
     menu_cqhttp
