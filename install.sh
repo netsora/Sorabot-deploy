@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 
@@ -39,13 +39,13 @@ check_sys() {
     elif grep -q -E -i "centos|red hat|redhat" /proc/version; then
         release="centos"
     else
-        echo -e "SoraBot_bot 暂不支持该Linux发行版" && exit 1
+        echo -e "SoraBot 暂不支持该Linux发行版" && exit 1
     fi
     bit=$(uname -m)
 }
 
 check_installed_SoraBot_status() {
-  [[ ! -e "${WORK_DIR}/SoraBot_bot/bot.py" ]] && echo -e "${Error} SoraBot_bot 没有安装，请检查 !" && exit 1
+  [[ ! -e "${WORK_DIR}/SoraBot/bot.py" ]] && echo -e "${Error} SoraBot 没有安装，请检查 !" && exit 1
 }
 
 check_installed_cqhttp_status() {
@@ -80,38 +80,53 @@ Set_ghproxy() {
 
 Set_work_dir() {
   echo -e "${Info} 使用自定义工作目录?"
-  echo -e "${Info} 该目录下对应的文件夹将会被用于存放 SoraBot_bot 和 go-cqhttp 的相关文件"
+  echo -e "${Info} 该目录下对应的文件夹将会被用于存放 SoraBot 和 go-cqhttp 的相关文件"
   read -erp "留空使用默认目录, 默认为 (/data):" work_dir_check
   [[ -z "${work_dir_check}" ]] && WORK_DIR='/data'
   [[ -n ${work_dir_check} ]] && WORK_DIR=${work_dir_check}
 }
 
+Installation_openssl(){
+
+wget --no-check-certificate https://www.openssl.org/source/openssl-1.1.1u.tar.gz -O ${TMP_DIR}/openssl-1.1.1u.tar.gz && \
+  tar -zxf ${TMP_DIR}/openssl-1.1.1u.tar.gz -C ${TMP_DIR}/ && \
+  cd ${TMP_DIR}/openssl-1.1.1u && \
+  ./config --prefix=/data/openssl-1.1.1u && \
+  make && make install > /dev/null 
+
+}
+
+
 Installation_dependency() {
     if [[ ${release} == "centos" ]]; then
-        yum -y update
-        yum install -y git fontconfig mkfontscale epel-release wget vim curl zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gcc make libffi-devel
-        if  ! which python3.10; then
-            wget https://mirrors.huaweicloud.com/python/3.10.12/Python-3.10.12.tgz -O ${TMP_DIR}/Python-3.10.12.tgz && \
-                tar -zxf ${TMP_DIR}/Python-3.10.12.tgz -C ${TMP_DIR}/ &&\
-                cd ${TMP_DIR}/Python-3.10.12 --with-ensurepip=install && \
-                ./configure && \
-                make -j $(cat /proc/cpuinfo |grep "processor"|wc -l) && \
-                make altinstall
-            python_v="python3.10"
-        fi
-	${python_v} <`curl -s -L https://bootstrap.pypa.io/get-pip.py` || echo -e "${Tip} pip 安装出错..."
-        rpm -v --import http://li.nux.ro/download/nux/RPM-GPG-KEY-nux.ro
-        rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
-    elif [[ ${release} == "debian" ]]; then
-        apt-get update
-        apt-get install -y wget ttf-wqy-zenhei xfonts-intl-chinese wqy* build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev
-        if  ! which python3.10;then
+        #yum -y update > /dev/null
+        yum install -y git fontconfig mkfontscale epel-release wget vim curl zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gcc make libffi-devel > /dev/null
+        if  ! which ${python_v}; then
+	    Installation_openssl
             wget https://mirrors.huaweicloud.com/python/3.10.12/Python-3.10.12.tgz -O ${TMP_DIR}/Python-3.10.12.tgz && \
                 tar -zxf ${TMP_DIR}/Python-3.10.12.tgz -C ${TMP_DIR}/ &&\
                 cd ${TMP_DIR}/Python-3.10.12 && \
-                ./configure --with-ensurepip=install && \
+                ./configure --prefix=/data/${python_v} --with-openssl=/data/openssl-1.1.1u --with-openssl-rpath=auto --with-ensurepip=install && \
                 make -j $(cat /proc/cpuinfo |grep "processor"|wc -l) && \
-                make altinstall
+                make altinstall > /dev/null
+                ln -s /data/${python_v}/bin/* /usr/bin
+            python_v="python3.10"
+        fi
+	#${python_v} <`curl -s -L https://bootstrap.pypa.io/get-pip.py` || echo -e "${Tip} pip 安装出错..."
+        rpm -v --import http://li.nux.ro/download/nux/RPM-GPG-KEY-nux.ro > /dev/null
+        rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm > /dev/null
+    elif [[ ${release} == "debian" ]]; then
+        #apt-get update > /dev/null
+        apt-get install -y wget ttf-wqy-zenhei xfonts-intl-chinese wqy* build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev > /dev/null
+        if  ! which ${python_v};then
+	    Installation_openssl
+            wget https://mirrors.huaweicloud.com/python/3.10.12/Python-3.10.12.tgz -O ${TMP_DIR}/Python-3.10.12.tgz && \
+                tar -zxf ${TMP_DIR}/Python-3.10.12.tgz -C ${TMP_DIR}/ &&\
+                cd ${TMP_DIR}/Python-3.10.12 && \
+                ./configure --prefix=/data/${python_v} --with-ensurepip=install && \
+                make -j $(cat /proc/cpuinfo |grep "processor"|wc -l) && \
+                make altinstall > /dev/null
+		ln -s /data/${python_v}/bin/* /usr/bin
              pythone_v="python3.10"    
         fi
         apt-get install -y \
@@ -129,15 +144,15 @@ Installation_dependency() {
             libxrandr2 \
             libgbm1 \
             libgtk-3-0 \
-            libasound2
-        ${python_v} <`curl -s -L https://bootstrap.pypa.io/get-pip.py` || echo -e "${Tip} pip 安装出错..."
+            libasound2 > /dev/null
+        #${python_v} <`curl -s -L https://bootstrap.pypa.io/get-pip.py` || echo -e "${Tip} pip 安装出错..."
     elif [[ ${release} == "ubuntu" ]]; then
-        apt-get update
-        apt-get install -y software-properties-common ttf-wqy-zenhei ttf-wqy-microhei fonts-arphic-ukai fonts-arphic-uming
+        #apt-get update > /dev/null
+        apt-get install -y software-properties-common ttf-wqy-zenhei ttf-wqy-microhei fonts-arphic-ukai fonts-arphic-uming > /dev/null
         fc-cache -f -v
         echo -e "\n" | add-apt-repository ppa:deadsnakes/ppa
-        if  ! which python3.8 && ! which python3.9;then
-            apt-get install -y python3.9-full
+        if  ! which python3.10;then
+            apt-get install -y python3.10-full > /dev/null
 	    python_v="python3.10"
             
         fi
@@ -156,8 +171,8 @@ Installation_dependency() {
             libxrandr2 \
             libgbm1 \
             libgtk-3-0 \
-            libasound2
-        ${python_v} <`curl -s -L https://bootstrap.pypa.io/get-pip.py` || echo -e "${Tip} pip 安装出错..."
+            libasound2 > /dev/null
+        #${python_v} <`curl -s -L https://bootstrap.pypa.io/get-pip.py` || echo -e "${Tip} pip 安装出错..."
     elif [[ ${release} == "archlinux" ]]; then
         pacman -Sy python python-pip unzip --noconfirm
     fi
@@ -175,15 +190,15 @@ check_arch() {
   fi
 }
 
-Download_SoraBot_bot() {
+Download_SoraBot() {
     cd "${TMP_DIR}" || exit 1
-    echo -e "${Info} 开始下载最新版 SoraBot_bot ..."
-    git clone "${ghproxy}${SoraBot_url}" -b main || (echo -e "${Error} SoraBot_bot 下载失败 !" && exit 1)
+    echo -e "${Info} 开始下载最新版 SoraBot ..."
+    git clone "${ghproxy}${SoraBot_url}" -b master || (echo -e "${Error} SoraBot 下载失败 !" && exit 1)
     echo -e "${Info} 开始下载最新版 go-cqhttp ..."
     gocq_version=$(wget -qO- -t1 -T2 "https://api.github.com/repos/Mrs4s/go-cqhttp/releases/latest" | grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g')
     wget -qO- "${ghproxy}https://github.com/Mrs4s/go-cqhttp/releases/download/${gocq_version}/go-cqhttp_$(uname -s)_${arch}.tar.gz" -O go-cqhttp.tar.gz || (echo -e "${Error} go-cqhttp 下载失败 !" && exit 1)
     cd "${WORK_DIR}" || exit 1
-    mv "${TMP_DIR}/SoraBot_bot" ./
+    mv "${TMP_DIR}/SoraBot" ./
     mkdir -p "go-cqhttp"
     tar -zxf "${TMP_DIR}/go-cqhttp.tar.gz" -C ./go-cqhttp/
 }
@@ -194,18 +209,19 @@ Set_config_admin() {
     read -erp "QQ频道机器人令牌:" BotToken
     read -erp "QQ频道机器人密钥:" BotSecret
     read -erp "tg机器人token(如果不使用tg可以为空，请直接回车):" tg_token 
-    cd ${WORK_DIR}/SoraBot_bot && \
-      sed -i "s/\"id\".*/\"id\": \"$BotAppID\",/g" .env && \
-      sed -i "s/\"token\".*/\"token\": \"BotToken\",/g" .env || \
-      sed -i "s/\"secret\".*/\"secret\": \"BotSecret\",/g" .env || \
-      echo -e "${Error} 配置文件不存在！请检查SoraBot_bot是否安装正确!"
+    cd ${WORK_DIR}/SoraBot && \
+      sed -i "s/\"id\".*/\"id\": \"$BotAppID\",/g" .env  
+      sed -i "s/\"token\".*/\"token\": \"$BotToken\",/g" .env 
+      sed -i "s/\"secret\".*/\"secret\": \"$BotSecret\",/g" .env || \
+      echo -e "${Error} 配置文件不存在！请检查SoraBot是否安装正确!" && \
     echo -e "${info} 设置成功!"
 
-   if [[ -n $tg_token ]]  ;then
+   if [[ -n "$tg_token" ]] && [[ $tg_token != "" ]]  ;then
       sed -i "s/telegram_bots.*/telegram_bots = [{${tg_token}}]/g" .env 
 
    else 
-      sed -i "s/driver.register_adapter(TG_Adapter)/\#driver.register_adapter(TG_Adapter)/g" bot.py
+      # 注释掉TG模块
+      sed -i "/TG_Adapter/s/^/#/g" bot.py
 
    fi
 }
@@ -228,44 +244,44 @@ Set_config() {
     Set_config_admin
 }
 
-Start_SoraBot_bot() {
+Start_SoraBot() {
     check_installed_SoraBot_status
     check_pid_SoraBot
     ${python_v} -m pip list | grep poetry > /dev/null 2>&1 || (echo "${Tip} 虚拟环境未安装,开始安装虚拟环境..." && Set_dependency)
-    [[ -n ${PID} ]] && echo -e "${Error} SoraBot_bot 正在运行，请检查 !" && exit 1
-    cd ${WORK_DIR}/SoraBot_bot
-    nohup ${python_v} -m poetry run python3 bot.py >> SoraBot_bot.log 2>&1 &
-    echo -e "${Info} SoraBot_bot 开始运行..."
+    [[ -n ${PID} ]] && echo -e "${Error} SoraBot 正在运行，请检查 !" && exit 1
+    cd ${WORK_DIR}/SoraBot
+    nohup ${python_v} -m poetry run python bot.py >> SoraBot.log 2>&1 &
+    echo -e "${Info} SoraBot 开始运行..."
 }
 
-Start_SoraBot_bot_Old() {
+Start_SoraBot_Old() {
     check_installed_SoraBot_status
     check_pid_SoraBot
-    [[ -n ${PID} ]] && echo -e "${Error} SoraBot_bot 正在运行，请检查 !" && exit 1
-    cd ${WORK_DIR}/SoraBot_bot
-    nohup ${python_v} bot.py >> SoraBot_bot.log 2>&1 &
-    echo -e "${Info} SoraBot_bot 开始运行..."
+    [[ -n ${PID} ]] && echo -e "${Error} SoraBot 正在运行，请检查 !" && exit 1
+    cd ${WORK_DIR}/SoraBot
+    nohup ${python_v} bot.py >> SoraBot.log 2>&1 &
+    echo -e "${Info} SoraBot 开始运行..."
 }
 
-Stop_SoraBot_bot() {
+Stop_SoraBot() {
     check_installed_SoraBot_status
     check_pid_SoraBot
-    [[ -z ${PID} ]] && echo -e "${Error} SoraBot_bot 没有运行，请检查 !" && exit 1
+    [[ -z ${PID} ]] && echo -e "${Error} SoraBot 没有运行，请检查 !" && exit 1
     kill -9 ${PID}
-    echo -e "${Info} SoraBot_bot 已停止运行..."
+    echo -e "${Info} SoraBot 已停止运行..."
 }
 
-Restart_SoraBot_bot() {
-    Stop_SoraBot_bot
-    Start_SoraBot_bot
+Restart_SoraBot() {
+    Stop_SoraBot
+    Start_SoraBot
 }
 
 View_SoraBot_log() {
-    tail -f -n 100 ${WORK_DIR}/SoraBot_bot/SoraBot_bot.log
+    tail -f -n 100 ${WORK_DIR}/SoraBot/SoraBot.log
 }
 
 Set_config_SoraBot() {
-    vim ${WORK_DIR}/SoraBot_bot/configs/config.yaml
+    vim ${WORK_DIR}/SoraBot/configs/config.yaml
 }
 
 Start_cqhttp() {
@@ -302,7 +318,7 @@ Set_config_cqhttp() {
 
 
 Set_config_SoraBot() {
-    vim ${WORK_DIR}/SoraBot_bot/configs/config.yaml
+    vim ${WORK_DIR}/SoraBot/configs/config.yaml
 }
 
 Exit_cqhttp() {
@@ -315,22 +331,28 @@ Exit_cqhttp() {
 }
 
 Set_dependency() {
-    cd ${WORK_DIR}/SoraBot_bot
-    ${python_v} -m pip install --ignore-installed poetry -i ${mirror_url}
+    cd ${WORK_DIR}/SoraBot
+    cat << EOF >> pyproject.toml
+      [[tool.poetry.source]]
+      name = "aliyun"
+      url = "http://mirrors.aliyun.com/pypi/simple"
+      default = true
+EOF
+    ${python_v} -m pip install --ignore-installed poetry -i ${mirror_url} --trusted-host ${mirror_url}
     ${python_v} -m poetry install
-    ${python_v} -m playwright install chromium
+    #${python_v} -m playwright install chromium
 }
 
 Uninstall_All() {
-  echo -e "${Tip} 是否完全卸载 SoraBot_bot 和 go-cqhttp？(此操作不可逆)"
+  echo -e "${Tip} 是否完全卸载 SoraBot 和 go-cqhttp？(此操作不可逆)"
   read -erp "请选择 [y/n], 默认为 n:" uninstall_check
   [[ -z "${uninstall_check}" ]] && uninstall_check='n'
   if [[ ${uninstall_check} == 'y' ]]; then
     cd ${WORK_DIR}
     check_pid_SoraBot
     [[ -z ${PID} ]] || kill -9 ${PID}
-    echo -e "${Info} 开始卸载 SoraBot_bot..."
-    rm -rf SoraBot_bot || echo -e "${Error} SoraBot_bot 卸载失败！"
+    echo -e "${Info} 开始卸载 SoraBot..."
+    rm -rf SoraBot || echo -e "${Error} SoraBot 卸载失败！"
     check_pid_cqhttp
     [[ -z ${PID} ]] || kill -9 ${PID}
     echo -e "${Info} 开始卸载 go-cqhttp..."
@@ -340,9 +362,9 @@ Uninstall_All() {
   echo -e "${Info} 操作已取消..." && menu_SoraBot
 }
 
-Install_SoraBot_bot() {
+Install_SoraBot() {
     check_root
-    [[ -e "${WORK_DIR}/SoraBot_bot/bot.py" ]] && echo -e "${Error} 检测到 SoraBot_bot 已安装 !" && exit 1
+    [[ -e "${WORK_DIR}/SoraBot/bot.py" ]] && echo -e "${Error} 检测到 SoraBot 已安装 !" && exit 1
     startTime=`date +%s`
     Set_ghproxy
     echo -e "${Info} 开始检查系统..."
@@ -351,23 +373,24 @@ Install_SoraBot_bot() {
     echo -e "${Info} 开始安装/配置 依赖..."
     Installation_dependency
     echo -e "${Info} 开始下载/安装..."
-    Download_SoraBot_bot
+    Download_SoraBot
     echo -e "${Info} 开始设置 用户配置..."
     Set_config
-    echo -e "${Info} 开始配置 SoraBot_bot 环境..."
+    echo -e "${Info} 开始配置 SoraBot 环境..."
     Set_pip_Mirror
     Set_dependency
-    if [[ ${release} == "centos" ]]; then
-        echo -e "${Info} CentOS 中文字体设置..."
-        sudo mkdir -p /usr/share/fonts/chinese
-        sudo cp -r ${WORK_DIR}/SoraBot_bot/resources/font /usr/share/fonts/chinese
-        cd /usr/share/fonts/chinese && mkfontscale
-    fi
+   # 设置主机字体 仅centos
+   # if [[ ${release} == "centos" ]]; then
+   #     echo -e "${Info} CentOS 中文字体设置..."
+   #     sudo mkdir -p /usr/share/fonts/chinese
+   #     sudo cp -r ${WORK_DIR}/SoraBot/resources/font /usr/share/fonts/chinese
+   #     cd /usr/share/fonts/chinese && mkfontscale
+   # fi
     endTime=`date +%s`
     ((outTime=($endTime-$startTime)))
     echo -e "${Info} 安装用时 ${outTime} s ..."
-    echo -e "${Info} 开始运行 SoraBot_bot..."
-    Start_SoraBot_bot
+    echo -e "${Info} 开始运行 SoraBot..."
+    Start_SoraBot
     echo -e "${Info} 开始运行 go-cqhttp..."
     Start_cqhttp
     View_cqhttp_log
@@ -394,7 +417,7 @@ menu_cqhttp() {
   -- Sakura | github.com/AkashiCoin --
  ${Green_font_prefix} 0.${Font_color_suffix} 升级脚本
  ————————————
- ${Green_font_prefix} 1.${Font_color_suffix} 安装 SoraBot_bot + go-cqhttp
+ ${Green_font_prefix} 1.${Font_color_suffix} 安装 SoraBot + go-cqhttp
 ————————————
  ${Green_font_prefix} 2.${Font_color_suffix} 启动 go-cqhttp
  ${Green_font_prefix} 3.${Font_color_suffix} 停止 go-cqhttp
@@ -405,7 +428,7 @@ menu_cqhttp() {
  ${Green_font_prefix} 7.${Font_color_suffix} 查看 go-cqhttp 日志
 ————————————
  ${Green_font_prefix} 8.${Font_color_suffix} 退出 go-cqhttp 账号
- ${Green_font_prefix}10.${Font_color_suffix} 切换为 SoraBot_bot 菜单" && echo
+ ${Green_font_prefix}10.${Font_color_suffix} 切换为 SoraBot 菜单" && echo
   if [[ -e "${WORK_DIR}/go-cqhttp/go-cqhttp" ]]; then
     check_pid_cqhttp
     if [[ -n "${PID}" ]]; then
@@ -432,7 +455,7 @@ menu_cqhttp() {
     Update_Shell
     ;;
   1)
-    Install_SoraBot_bot
+    Install_SoraBot
     ;;
   2)
     Start_cqhttp
@@ -465,40 +488,40 @@ menu_cqhttp() {
 }
 
 menu_SoraBot() {
-  echo && echo -e "  SoraBot_bot 一键安装管理脚本 ${Red_font_prefix}[v${sh_ver}]${Font_color_suffix}
+  echo && echo -e "  SoraBot 一键安装管理脚本 ${Red_font_prefix}[v${sh_ver}]${Font_color_suffix}
   -- Sakura | github.com/AkashiCoin --
  ${Green_font_prefix} 0.${Font_color_suffix} 升级脚本
  ————————————
- ${Green_font_prefix} 1.${Font_color_suffix} 安装 SoraBot_bot + go-cqhttp
+ ${Green_font_prefix} 1.${Font_color_suffix} 安装 SoraBot + go-cqhttp
 ————————————
- ${Green_font_prefix} 2.${Font_color_suffix} 启动 SoraBot_bot
- ${Green_font_prefix} 3.${Font_color_suffix} 停止 SoraBot_bot
- ${Green_font_prefix} 4.${Font_color_suffix} 重启 SoraBot_bot
+ ${Green_font_prefix} 2.${Font_color_suffix} 启动 SoraBot
+ ${Green_font_prefix} 3.${Font_color_suffix} 停止 SoraBot
+ ${Green_font_prefix} 4.${Font_color_suffix} 重启 SoraBot
 ————————————
  ${Green_font_prefix} 5.${Font_color_suffix} 设置 管理员账号
- ${Green_font_prefix} 6.${Font_color_suffix} 修改 SoraBot_bot 配置文件
- ${Green_font_prefix} 7.${Font_color_suffix} 查看 SoraBot_bot 日志
+ ${Green_font_prefix} 6.${Font_color_suffix} 修改 SoraBot 配置文件
+ ${Green_font_prefix} 7.${Font_color_suffix} 查看 SoraBot 日志
 ————————————
- ${Green_font_prefix} 8.${Font_color_suffix} 卸载 SoraBot_bot + go-cqhttp
- ${Green_font_prefix} 9.${Font_color_suffix} 旧版启动 SoraBot_bot
+ ${Green_font_prefix} 8.${Font_color_suffix} 卸载 SoraBot + go-cqhttp
+ ${Green_font_prefix} 9.${Font_color_suffix} 旧版启动 SoraBot
  ${Green_font_prefix}10.${Font_color_suffix} 切换为 go-cqhttp 菜单" && echo
-  if [[ -e "${WORK_DIR}/SoraBot_bot/bot.py" ]]; then
+  if [[ -e "${WORK_DIR}/SoraBot/bot.py" ]]; then
     check_pid_SoraBot
     if [[ -n "${PID}" ]]; then
-      echo -e " 当前状态: SoraBot_bot ${Green_font_prefix}已安装${Font_color_suffix} 并 ${Green_font_prefix}已启动${Font_color_suffix}"
+      echo -e " 当前状态: SoraBot ${Green_font_prefix}已安装${Font_color_suffix} 并 ${Green_font_prefix}已启动${Font_color_suffix}"
     else
-      echo -e " 当前状态: SoraBot_bot ${Green_font_prefix}已安装${Font_color_suffix} 但 ${Red_font_prefix}未启动${Font_color_suffix}"
+      echo -e " 当前状态: SoraBot ${Green_font_prefix}已安装${Font_color_suffix} 但 ${Red_font_prefix}未启动${Font_color_suffix}"
     fi
   else
-    if [[ -e "${file}/SoraBot_bot/bot.py" ]]; then
+    if [[ -e "${file}/SoraBot/bot.py" ]]; then
       check_pid_SoraBot
       if [[ -n "${PID}" ]]; then
-        echo -e " 当前状态: SoraBot_bot ${Green_font_prefix}已安装${Font_color_suffix} 并 ${Green_font_prefix}已启动${Font_color_suffix}"
+        echo -e " 当前状态: SoraBot ${Green_font_prefix}已安装${Font_color_suffix} 并 ${Green_font_prefix}已启动${Font_color_suffix}"
       else
-        echo -e " 当前状态: SoraBot_bot ${Green_font_prefix}已安装${Font_color_suffix} 但 ${Red_font_prefix}未启动${Font_color_suffix}"
+        echo -e " 当前状态: SoraBot ${Green_font_prefix}已安装${Font_color_suffix} 但 ${Red_font_prefix}未启动${Font_color_suffix}"
       fi
     else
-      echo -e " 当前状态: SoraBot_bot ${Red_font_prefix}未安装${Font_color_suffix}"
+      echo -e " 当前状态: SoraBot ${Red_font_prefix}未安装${Font_color_suffix}"
     fi
   fi
   echo
@@ -508,16 +531,16 @@ menu_SoraBot() {
     Update_Shell
     ;;
   1)
-    Install_SoraBot_bot
+    Install_SoraBot
     ;;
   2)
-    Start_SoraBot_bot
+    Start_SoraBot
     ;;
   3)
-    Stop_SoraBot_bot
+    Stop_SoraBot
     ;;
   4)
-    Restart_SoraBot_bot
+    Restart_SoraBot
     ;;
   5)
     Set_config_admin
@@ -532,7 +555,7 @@ menu_SoraBot() {
     Uninstall_All
     ;;
   9)
-    Start_SoraBot_bot_Old
+    Start_SoraBot_Old
     ;;
   10)
     menu_cqhttp
