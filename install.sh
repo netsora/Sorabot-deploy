@@ -7,7 +7,7 @@ SoraBot_url="https://github.com/netsora/SoraBot.git"
 WORK_DIR="/data"
 TMP_DIR="$(mktemp -d)"
 python_v="python3.10"
-sh_ver="1.0.0"
+sh_ver="1.1.0"
 ghproxy="https://ghproxy.com/"
 mirror_url="https://pypi.tuna.tsinghua.edu.cn/simple"
 
@@ -103,7 +103,8 @@ wget --no-check-certificate https://www.openssl.org/source/openssl-1.1.1u.tar.gz
 
 Installation_dependency() {
     if [[ ${release} == "centos" ]]; then
-        yum install -y git fontconfig mkfontscale epel-release wget vim curl zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gcc make libffi-devel
+        yum install -y git fontconfig mkfontscale epel-release perl wget vim curl zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gcc make libffi-devel || \
+        yum install --allowerasing -y git fontconfig mkfontscale epel-release perl wget vim curl zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gcc make libffi-devel
         if  ! which ${python_v}; then
 	      Installation_openssl
             wget https://mirrors.huaweicloud.com/python/3.10.12/Python-3.10.12.tgz -O ${TMP_DIR}/Python-3.10.12.tgz && \
