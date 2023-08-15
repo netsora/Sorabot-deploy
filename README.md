@@ -7,5 +7,8 @@ bash <(curl -s -L https://raw.githubusercontent.com/netsora/Sorabot-deploy/maste
 ```
 
 ## 更新日志
+2020/8/16
+* 去掉 一键安装gocq功能 [#2](https://github.com/netsora/Sorabot-deploy/pull/2)
+
 2023/7/28
 * Nice to meet you !
